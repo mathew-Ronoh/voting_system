@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $s->execute([$name, $email, password_hash($password, PASSWORD_DEFAULT)]);
         $message = 'Administrator created. Delete setup_admin.php immediately, then sign in.';
     } else {
-        $message = 'Enter a name, valid email, and password of at least 12 characters.';
+        $message = 'Enter a name, valid email, and password of at least 4 characters.';
     }
 }
 page_header('Create first administrator', ['layout' => 'public']);
