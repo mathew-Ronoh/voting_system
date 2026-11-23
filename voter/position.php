@@ -37,8 +37,11 @@ page_header($pos['name'], ['subtitle' => $pos['election_title']]);
     </div>
     <div class="grid-2">
       <div><strong>Election:</strong> <div class="muted"><?=e($pos['election_title'])?></div></div>
+      <div><strong>Category:</strong> <div class="muted"><?=e($pos['category'] ?: 'General')?></div></div>
+      <div><strong>Available seats:</strong> <div class="muted"><?= (int)($pos['number_of_seats'] ?? $pos['max_winners'] ?? 1) ?></div></div>
       <div><strong>Candidates:</strong> <div class="muted"><?=count($rows)?> approved</div></div>
     </div>
+    <?php if(!empty($pos['eligibility_requirements'])): ?><div style="margin-top:12px"><strong>Eligibility requirements:</strong><div class="muted" style="margin-top:4px"><?=e($pos['eligibility_requirements'])?></div></div><?php endif; ?>
     <div class="actions" style="margin-top:16px">
       <a class="btn secondary small" href="election.php?election_id=<?=$eid?>">Back to election</a>
       <?php if($pos['election_status']==='open' && !$voted && $eligible): ?>

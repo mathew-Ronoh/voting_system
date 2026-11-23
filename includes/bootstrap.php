@@ -113,7 +113,7 @@ function nav_items_for_role(string $role): array {
         'admin' => [
             ['label' => 'Dashboard', 'href' => "$base/admin/dashboard.php", 'icon' => 'grid'],
             ['label' => 'Election Management', 'href' => "$base/admin/elections.php", 'icon' => 'calendar'],
-            ['label' => 'Position Management', 'href' => "$base/admin/positions.php", 'icon' => 'list'],
+            ['label' => 'Election Positions', 'href' => "$base/admin/positions.php", 'icon' => 'list'],
             ['label' => 'Candidate Management', 'href' => "$base/admin/candidates.php", 'icon' => 'users'],
             ['label' => 'Voter Management', 'href' => "$base/admin/voters.php", 'icon' => 'user-check'],
             ['label' => 'Voter Approvals', 'href' => "$base/admin/voters.php?status=pending", 'icon' => 'user-check'],
@@ -126,8 +126,8 @@ function nav_items_for_role(string $role): array {
         'candidate' => [
             ['label' => 'Dashboard', 'href' => "$base/candidate/dashboard.php", 'icon' => 'grid'],
             ['label' => 'My Profile', 'href' => "$base/candidate/profile.php", 'icon' => 'user'],
+            ['label' => 'Apply for Position', 'href' => "$base/candidate/apply.php", 'icon' => 'file'],
             ['label' => 'My Elections', 'href' => "$base/candidate/elections.php", 'icon' => 'calendar'],
-            ['label' => 'My Position', 'href' => "$base/candidate/elections.php", 'icon' => 'list'],
             ['label' => 'My Manifesto', 'href' => "$base/candidate/manifesto.php", 'icon' => 'file'],
             ['label' => 'Published Results', 'href' => "$base/candidate/results.php", 'icon' => 'chart'],
             ['label' => 'Notifications', 'href' => "$base/candidate/notifications.php", 'icon' => 'bell'],

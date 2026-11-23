@@ -30,7 +30,7 @@ $posByElection = [];
 if ($elections) {
     $ids = array_map(fn($r)=>(int)$r['election_id'], $elections);
     $ph = implode(',', array_fill(0,count($ids),'?'));
-    $pqs = $pdo->prepare("SELECT p.election_id,p.position_id,p.name,p.description,
+    $pqs = $pdo->prepare("SELECT p.election_id,p.position_id,p.name,p.category,p.description,
         (SELECT COUNT(*) FROM election_candidates ec JOIN candidates c ON c.candidate_id=ec.candidate_id JOIN users u ON u.user_id=c.user_id WHERE ec.position_id=p.position_id AND u.status='active') AS candidate_count
         FROM positions p WHERE p.election_id IN ($ph) AND p.status='active' ORDER BY p.created_at,p.position_id");
     $pqs->execute($ids);
@@ -80,17 +80,20 @@ if ($elections) {
           <strong>End:</strong> <?=e(date('M j, Y g:i A', strtotime($r['end_at'])))?>
         </p>
         <div style="margin-bottom:14px">
-          <strong style="font-size:13px;display:block;margin-bottom:8px">Available Positions</strong>
-          <?php if($epos): ?>
-            <div style="display:grid;gap:8px">
-              <?php foreach($epos as $p): ?>
-                <div style="border:1px solid var(--border);border-radius:10px;padding:10px;background:#f8fafc">
-                  <div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><strong style="font-size:13px"><?=e($p['name'])?></strong><span class="badge gray" style="font-size:11px"><?= (int)$p['candidate_count'] ?> candidates</span></div>
-                  <div class="muted" style="font-size:12px;margin:4px 0 8px"><?=e(mb_strimwidth((string)($p['description']?:'No description'),0,70,'…'))?></div>
-                  <a class="btn secondary small" href="position.php?position_id=<?=$p['position_id']?>&election_id=<?=$r['election_id']?>" style="padding:5px 10px;font-size:12px">View Candidates</a>
-                </div>
-              <?php endforeach; ?>
-            </div>
+          <strong style="font-size:13px;display:block;margin-bottom:8px">Election Candidates / Positions</strong>
+          <?php if($epos): $byCat=[]; foreach($epos as $p){ $byCat[$p['category'] ?: 'General'][]=$p; } ?>
+            <?php foreach($byCat as $cat=>$plist): ?>
+              <div style="font-size:12px;font-weight:700;color:#4a6b2a;margin:8px 0 6px;text-transform:uppercase;letter-spacing:.03em"><?=e($cat)?></div>
+              <div style="display:grid;gap:8px;margin-bottom:8px">
+                <?php foreach($plist as $p): ?>
+                  <div style="border:1px solid var(--border);border-radius:10px;padding:10px;background:var(--surface-2)">
+                    <div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><strong style="font-size:13px"><?=e($p['name'])?></strong><span class="badge gray" style="font-size:11px"><?= (int)$p['candidate_count'] ?> candidates</span></div>
+                    <div class="muted" style="font-size:12px;margin:4px 0 8px"><?=e(mb_strimwidth((string)($p['description']?:'No description'),0,70,'…'))?></div>
+                    <a class="btn secondary small" href="position.php?position_id=<?=$p['position_id']?>&election_id=<?=$r['election_id']?>" style="padding:5px 10px;font-size:12px">View Candidates</a>
+                  </div>
+                <?php endforeach; ?>
+              </div>
+            <?php endforeach; ?>
           <?php else: ?><div class="muted" style="font-size:13px">No active positions yet.</div><?php endif; ?>
         </div>
         <div class="actions">

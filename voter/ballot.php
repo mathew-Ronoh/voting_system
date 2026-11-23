@@ -16,7 +16,7 @@ $s = $pdo->prepare("SELECT participation_id FROM voter_participation WHERE elect
 $s->execute([$eid, $voterId]);
 if ($s->fetch()) { flash('You have already submitted a ballot for this election.', 'error'); redirect('/voting_system/voter/confirmation.php?election_id=' . $eid); }
 
-$rows = $pdo->prepare("SELECT p.position_id,p.name AS position_name,p.max_winners,p.max_selections,p.description,
+$rows = $pdo->prepare("SELECT p.position_id,p.name AS position_name,p.max_winners,p.max_selections,p.number_of_seats,p.category,p.description,p.eligibility_requirements,
     c.candidate_id,u.full_name,ca.manifesto,ca.candidate_number,ca.profile_image
   FROM positions p
   JOIN election_candidates ec ON ec.position_id=p.position_id AND ec.election_id=p.election_id
@@ -31,7 +31,9 @@ foreach ($rows->fetchAll() as $r) {
     $pid = (int)$r['position_id'];
     $grouped[$pid]['name'] = $r['position_name'];
     $grouped[$pid]['description'] = $r['description'];
-    $grouped[$pid]['max_winners'] = max(1, (int)($r['max_winners'] ?: $r['max_selections'] ?: 1));
+    $grouped[$pid]['max_winners'] = max(1, (int)($r['number_of_seats'] ?: $r['max_winners'] ?: $r['max_selections'] ?: 1));
+    $grouped[$pid]['category'] = $r['category'];
+    $grouped[$pid]['eligibility'] = $r['eligibility_requirements'];
     $grouped[$pid]['candidates'][] = $r;
 }
 // include active positions with no candidates? block voting - must be configured
@@ -128,7 +130,7 @@ page_header($review ? 'Review Ballot' : 'Election Ballot', ['subtitle' => $elect
       <span class="badge green">Open</span>
     </div>
     <?php if($emptyPositions): ?><div class="alert error" style="margin-bottom:0">Voting is unavailable because these active positions have no approved candidates: <?=e(implode(', ', array_column($emptyPositions,'name')))?></div>
-    <?php elseif(!$review): ?><div class="alert info" style="margin-bottom:0"><strong>Ballot privacy:</strong> Your participation is recorded separately from ballot selections. Once submitted, your ballot cannot be changed.</div><?php endif; ?>
+    <?php elseif(!$review): ?><div class="alert info" style="margin-bottom:0"><strong>Ballot instructions:</strong> You have <?=count($grouped)?> position(s) to vote for. Select the required candidate(s) for each position, then review and confirm. Your participation is recorded separately from ballot selections and cannot be changed after submission.</div><?php endif; ?>
   </div>
 
   <?php if ($review): ?>
@@ -162,8 +164,9 @@ page_header($review ? 'Review Ballot' : 'Election Ballot', ['subtitle' => $elect
       <input type="hidden" name="action" value="review">
       <?php foreach ($grouped as $pid => $g): $max=(int)$g['max_winners']; $isMulti=$max>1; ?>
         <section class="panel" style="margin-bottom:20px">
-          <div class="panel-header"><div><h2><?=e($g['name'])?></h2><p><?= $isMulti ? 'Select up to '.$max.' candidates for this position.' : 'Select one candidate for this position.' ?></p></div><?php if($isMulti): ?><span class="badge orange">Max <?=$max?></span><?php endif; ?></div>
-          <?php if(!empty($g['description'])): ?><p class="muted" style="margin-top:-8px;margin-bottom:14px"><?=e($g['description'])?></p><?php endif; ?>
+          <div class="panel-header"><div><h2><?=e($g['name'])?></h2><p><?= $isMulti ? 'Select up to '.$max.' candidate(s) for this position ('.$max.' seat'.($max>1?'s':'').').' : 'Select one candidate for this position (1 seat).' ?></p></div><div style="display:flex;gap:6px;flex-wrap:wrap"><?php if(!empty($g['category'])): ?><span class="badge gray"><?=e($g['category'])?></span><?php endif; ?><?php if($isMulti): ?><span class="badge orange"><?=$max?> seats</span><?php endif; ?></div></div>
+          <?php if(!empty($g['description'])): ?><p class="muted" style="margin-top:-8px;margin-bottom:8px"><?=e($g['description'])?></p><?php endif; ?>
+          <?php if(!empty($g['eligibility'])): ?><p class="muted" style="margin-top:0;margin-bottom:14px;font-size:13px"><strong>Eligibility:</strong> <?=e($g['eligibility'])?></p><?php endif; ?>
           <div style="display:grid;gap:12px">
             <?php foreach ($g['candidates'] as $c): $checked=in_array((int)$c['candidate_id'], $normalized[$pid] ?? [], true); ?>
               <label style="display:flex;gap:14px;align-items:flex-start;padding:16px;border:1px solid var(--border);border-radius:12px;cursor:pointer;background:var(--surface)">

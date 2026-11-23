@@ -52,12 +52,43 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 } catch(Throwable $e){ flash('Could not assign candidate. Assignment may be invalid or duplicate.','error'); }
             }
         }
+    } elseif($action==='app_approve' || $action==='app_reject'){
+        $appId=(int)($_POST['application_id']??0);
+        $app=$pdo->prepare("SELECT ca.*, u.user_id, u.full_name, p.name AS pos_name, e.title AS el_title, e.allow_multi_position FROM candidate_applications ca JOIN candidates c ON c.candidate_id=ca.candidate_id JOIN users u ON u.user_id=c.user_id JOIN positions p ON p.position_id=ca.position_id JOIN elections e ON e.election_id=ca.election_id WHERE ca.application_id=?");
+        $app->execute([$appId]); $app=$app->fetch();
+        if(!$app){ flash('Application not found.','error'); }
+        elseif($action==='app_reject'){
+            $pdo->prepare("UPDATE candidate_applications SET status='rejected', reviewed_by=?, reviewed_at=NOW() WHERE application_id=?")->execute([current_user_id(),$appId]);
+            log_action($pdo,'candidate_application_rejected','Application #'.$appId);
+            notify_user($pdo,(int)$app['user_id'],'Application rejected','Your application for '.$app['pos_name'].' in '.$app['el_title'].' was rejected.');
+            flash('Application rejected.');
+        } else {
+            $dup=$pdo->prepare("SELECT COUNT(*) FROM election_candidates WHERE election_id=? AND position_id=? AND candidate_id=?");
+            $dup->execute([$app['election_id'],$app['position_id'],$app['candidate_id']]);
+            if(!(int)$app['allow_multi_position']){
+                $other=$pdo->prepare("SELECT p2.name FROM election_candidates ec JOIN positions p2 ON p2.position_id=ec.position_id WHERE ec.election_id=? AND ec.candidate_id=? AND ec.position_id<>? LIMIT 1");
+                $other->execute([$app['election_id'],$app['candidate_id'],$app['position_id']]); $otherPos=$other->fetchColumn();
+                if($otherPos){ flash('Cannot approve: candidate already assigned to "'.$otherPos.'" and multi-position is not allowed.','error'); redirect('/voting_system/admin/candidates.php'); }
+            }
+            try {
+                $pdo->beginTransaction();
+                if((int)$dup->fetchColumn()===0){
+                    $pdo->prepare("INSERT INTO election_candidates(election_id,position_id,candidate_id) VALUES(?,?,?)")->execute([$app['election_id'],$app['position_id'],$app['candidate_id']]);
+                }
+                $pdo->prepare("UPDATE candidate_applications SET status='approved', reviewed_by=?, reviewed_at=NOW() WHERE application_id=?")->execute([current_user_id(),$appId]);
+                $pdo->commit();
+                log_action($pdo,'candidate_application_approved','Application #'.$appId);
+                notify_user($pdo,(int)$app['user_id'],'Application approved','Your application for '.$app['pos_name'].' in '.$app['el_title'].' was approved.');
+                flash('Application approved and candidate assigned.');
+            } catch(Throwable $e){ if($pdo->inTransaction())$pdo->rollBack(); flash('Could not approve application.','error'); }
+        }
     }
     redirect('/voting_system/admin/candidates.php');
 }
 page_header('Candidate Management', ['subtitle' => 'Register and assign candidates']);
 $positions=$pdo->query("SELECT p.position_id,p.name,e.title,e.election_id FROM positions p JOIN elections e ON e.election_id=p.election_id ORDER BY e.created_at DESC,p.name")->fetchAll();
 $allCandidates=$pdo->query("SELECT c.candidate_id,u.full_name,u.email FROM candidates c JOIN users u ON u.user_id=c.user_id WHERE u.status='active' ORDER BY u.full_name")->fetchAll();
+$applications=$pdo->query("SELECT ca.application_id,ca.status,ca.created_at,u.full_name,u.email,p.name AS position_name,e.title AS election_title FROM candidate_applications ca JOIN candidates c ON c.candidate_id=ca.candidate_id JOIN users u ON u.user_id=c.user_id JOIN positions p ON p.position_id=ca.position_id JOIN elections e ON e.election_id=ca.election_id ORDER BY ca.status='pending' DESC, ca.created_at DESC LIMIT 100")->fetchAll();
 $rows=$pdo->query("SELECT c.candidate_id,u.full_name,u.email,u.status AS account_status,p.name AS position_name,e.title FROM candidates c JOIN users u ON u.user_id=c.user_id LEFT JOIN election_candidates ec ON ec.candidate_id=c.candidate_id LEFT JOIN positions p ON p.position_id=ec.position_id LEFT JOIN elections e ON e.election_id=ec.election_id ORDER BY c.candidate_id DESC")->fetchAll();
 ?>
 <div class="page-stack">
@@ -105,6 +136,22 @@ $rows=$pdo->query("SELECT c.candidate_id,u.full_name,u.email,u.status AS account
       </div>
       <div><button class="btn">Assign candidate</button></div>
     </form>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header"><div><h2>Candidate Applications</h2><p>Review and approve/reject position applications.</p></div></div>
+    <div class="table-wrap" style="box-shadow:none;border:0"><table><thead><tr><th>Candidate</th><th>Election</th><th>Position</th><th>Status</th><th>Applied</th><th>Action</th></tr></thead><tbody>
+    <?php foreach($applications as $a): ?>
+      <tr>
+        <td><strong><?=e($a['full_name'])?></strong><div class="muted" style="font-size:12px"><?=e($a['email'])?></div></td>
+        <td><?=e($a['election_title'])?></td><td><?=e($a['position_name'])?></td>
+        <td><span class="badge <?= $a['status']==='approved'?'green':($a['status']==='pending'?'orange':'red') ?>"><?=e(ucfirst($a['status']))?></span></td>
+        <td><small><?=e(date('M j, Y', strtotime($a['created_at'])))?></small></td>
+        <td><?php if($a['status']==='pending'): ?><form class="inline" method="post"><input type="hidden" name="csrf_token" value="<?=e(csrf_token())?>"><input type="hidden" name="application_id" value="<?=$a['application_id']?>"><button class="btn small" name="action" value="app_approve">Approve</button> <button class="btn danger small" name="action" value="app_reject">Reject</button></form><?php else: ?><span class="muted">—</span><?php endif; ?></td>
+      </tr>
+    <?php endforeach; ?>
+    <?php if(!$applications): ?><tr><td colspan="6" class="muted">No applications yet.</td></tr><?php endif; ?>
+    </tbody></table></div>
   </div>
 
   <div class="panel">

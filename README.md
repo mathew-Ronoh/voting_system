@@ -1,42 +1,122 @@
-# General-Purpose Electronic Voting Management System
+# Voting Management System (PHP/MySQL)
 
-## Requirements
-- XAMPP with Apache, PHP 8+ and MySQL/MariaDB
-- A modern web browser
-- Visual Studio Code (recommended)
+A role-based electronic voting system built with PHP 8+, MySQL/MariaDB, Apache (XAMPP), PDO prepared statements, CSRF protection, and session auth.
 
-## Installation on Windows
-1. Extract `voting_system` into `C:\xampp\htdocs\`.
-2. Open XAMPP Control Panel and start Apache and MySQL.
-3. Open `http://localhost/phpmyadmin`.
-4. Import `database/voting_system.sql` (select the SQL file and click Import).
-5. Open `config/database.php` and confirm the MySQL username/password. Default XAMPP is usually user `root` with an empty password.
-6. Visit `http://localhost/voting_system/setup_admin.php`.
-7. Create the first administrator account.
-8. Delete `setup_admin.php` immediately after successful administrator creation.
-9. Sign in at `http://localhost/voting_system/login.php`.
+## Features
+- **Roles:** Admin, Candidate, Voter (RBAC enforced on backend)
+- **Admin:** elections, positions, candidates, voters, eligibility rules, monitoring, reports/audit, settings
+- **Election Positions Module:** 13 predefined positions by category, CRUD/search/filter, activate/deactivate, seats, eligibility, candidate assignment, candidate application review
+- **Voting:** active positions grouped by category, one/multi-seat rules, review/confirm, duplicate-vote prevention, ballot reference, results hidden until published
+- **UI:** IEBC-inspired theme
 
-## Suggested test workflow
-1. Sign in as administrator.
-2. Approve self-registered voters in Admin > Voter approvals.
-3. Create an election with start and end times in the future.
-4. Add positions.
-5. Register candidates and assign them to positions.
-6. Activate the election. The election status is calculated from its start/end dates.
-7. When the election is open, sign in as an approved voter and submit a ballot.
-8. Once the scheduled end time has passed, use Admin > Results to close and publish results.
-9. Voters and candidates can then view published results.
+## Team Setup (XAMPP Apache + MySQL)
 
-## Important limitations
-This is an educational prototype, not a certified election platform. Before real-world deployment, commission an independent security review and add stronger identity verification, HTTPS, rate limiting, secure hosting/backups, accessibility testing, operational monitoring, and a formally reviewed ballot-secrecy design. A database separation between participation and ballots reduces direct identity-to-choice linkage but does not guarantee anonymity against a privileged database operator, server compromise, or traffic analysis.
+### 1. Prerequisites
+- XAMPP (Apache + MySQL/MariaDB) with PHP 8+
+- Git
 
-The prototype supports one selection per position and one ballot per voter per election. It does not implement ranked-choice voting, write-in candidates, multi-factor authentication, email verification, cryptographic end-to-end verifiability, or election observer workflows.
+### 2. Clone project
+Clone into your XAMPP web root:
+
+**Linux (XAMPP):**
+```bash
+cd /opt/lampp/htdocs
+git clone https://github.com/mathew-Ronoh/voting_system.git
+```
+
+**Windows (XAMPP):**
+```bat
+cd C:\xampp\htdocs
+git clone https://github.com/mathew-Ronoh/voting_system.git
+```
+
+### 3. Configure database (local, not committed)
+Copy the example config and adjust if needed:
+
+```bash
+cp config/database.example.php config/database.local.php
+```
+
+Default XAMPP settings work as-is:
+- Host: `127.0.0.1`
+- DB: `voting_system_db`
+- User: `root`
+- Password: `` (empty)
+
+`config/database.local.php` is gitignored so each teammate can keep local credentials.
+
+### 4. Create and import database
+Start Apache and MySQL from XAMPP, then:
+
+**Linux:**
+```bash
+/opt/lampp/bin/mysql -u root -e "CREATE DATABASE IF NOT EXISTS voting_system_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+/opt/lampp/bin/mysql -u root voting_system_db < database/voting_system.sql
+/opt/lampp/bin/php database/migrate_positions_module.php
+```
+
+**Windows (XAMPP shell/phpMyAdmin):**
+```bat
+mysql -u root -e "CREATE DATABASE IF NOT EXISTS voting_system_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+mysql -u root voting_system_db < database\voting_system.sql
+php database\migrate_positions_module.php
+```
+
+You can also import `database/voting_system.sql` via phpMyAdmin: http://localhost/phpmyadmin/
+
+### 5. Start servers
+**Linux:**
+```bash
+sudo /opt/lampp/lampp startapache
+sudo /opt/lampp/lampp startmysql
+```
+
+**Windows:** start Apache and MySQL in XAMPP Control Panel.
+
+### 6. Open the app
+- App: http://localhost/voting_system/
+- Login: http://localhost/voting_system/login.php
+
+If you need an initial admin account, use the existing setup flow only in a trusted local environment and remove any one-time setup script after use.
+
+## Default Predefined Election Positions
+Admin can load these from **Admin > Election Positions > Load 13 Predefined Positions**:
+
+- **Executive Leadership:** President, Vice President, Secretary General, Deputy Secretary General
+- **Finance:** Treasurer
+- **Academic Affairs:** Academic Secretary
+- **Student Welfare:** Organizing Secretary, Social Welfare Secretary
+- **Student Representation:** Men's Representative, Women's Representative, Sports Representative, Disability Representative, Year Representative
+
+## Common XAMPP issues
+
+### Port 3306 already in use
+If system MariaDB/MySQL is using 3306, XAMPP MySQL will fail to start. Check:
+```bash
+sudo ss -ltnp | grep 3306
+sudo /opt/lampp/lampp status
+```
+Either stop the system service:
+```bash
+sudo systemctl stop mariadb
+sudo /opt/lampp/lampp startmysql
+```
+Or configure XAMPP MySQL to use a different port and update `config/database.local.php`.
+
+### XAMPP MySQL system-table warnings
+If logs mention `mysql.event` / `innodb_table_stats` and suggest `mysql_upgrade`, back up first, then:
+```bash
+sudo /opt/lampp/bin/mysql_upgrade -u root
+sudo /opt/lampp/lampp restartmysql
+```
 
 ## Security notes
-- Passwords are stored using PHP `password_hash()`.
-- Database access uses PDO prepared statements.
-- Session IDs are regenerated after login.
-- Mutating forms use CSRF tokens.
-- Role-based authorization is enforced on protected pages.
-- Ballot submission uses a database transaction and a unique participation constraint.
-- Remove the one-time setup script after creating the administrator.
+- Passwords are hashed with PHP `password_hash()`.
+- DB access uses PDO prepared statements.
+- Session IDs regenerated after login.
+- CSRF tokens on mutating forms.
+- RBAC enforced on backend.
+- Ballot submission uses DB transaction and participation constraints.
+
+## Important limitations
+This is an educational prototype, not a certified election platform. Before real-world deployment, commission an independent security review and add stronger identity verification, HTTPS, rate limiting, secure hosting/backups, accessibility testing, monitoring, and a formally reviewed ballot-secrecy design.

@@ -97,12 +97,11 @@ page_header('Position Details', ['subtitle' => $pos['name']]);
       <div><strong>Category:</strong> <div class="muted"><?=e($pos['category'] ?: 'General')?></div></div>
       <div><strong>Election start:</strong> <div class="muted"><?=e(date('M j, Y g:i A', strtotime($pos['start_at'])))?></div></div>
       <div><strong>Election closing:</strong> <div class="muted"><?=e(date('M j, Y g:i A', strtotime($pos['end_at'])))?></div></div>
-      <div><strong>Max winners:</strong> <div class="muted"><?= (int)($pos['max_winners'] ?? 1) ?></div></div>
+      <div><strong>Number of seats:</strong> <div class="muted"><?= (int)($pos['number_of_seats'] ?? $pos['max_winners'] ?? 1) ?></div></div>
       <div><strong>Candidates assigned:</strong> <div class="muted"><?= count($assignedRows) ?></div></div>
     </div>
-    <?php if(!empty($pos['responsibilities'])): ?>
-      <div style="margin-top:16px"><strong>Responsibilities:</strong><div class="muted" style="white-space:pre-line;margin-top:6px"><?=e($pos['responsibilities'])?></div></div>
-    <?php endif; ?>
+    <?php if(!empty($pos['eligibility_requirements'])): ?><div style="margin-top:16px"><strong>Eligibility requirements:</strong><div class="muted" style="white-space:pre-line;margin-top:6px"><?=e($pos['eligibility_requirements'])?></div></div><?php endif; ?>
+    <?php if(!empty($pos['responsibilities'])): ?><div style="margin-top:16px"><strong>Responsibilities:</strong><div class="muted" style="white-space:pre-line;margin-top:6px"><?=e($pos['responsibilities'])?></div></div><?php endif; ?>
     <div class="actions" style="margin-top:18px">
       <a class="btn secondary small" href="positions.php?edit=<?=$pid?>">Edit position</a>
       <a class="btn secondary small" href="positions.php">Back to positions</a>

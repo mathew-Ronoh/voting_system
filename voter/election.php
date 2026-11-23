@@ -13,7 +13,7 @@ $eligible = $voterId ? is_voter_eligible_for_election($pdo,$eid,$voterId) : fals
 $voted = !empty($part);
 $status = $el['status'];
 
-$posSt = $pdo->prepare("SELECT p.position_id, p.name, p.description, p.max_winners, p.status,
+$posSt = $pdo->prepare("SELECT p.position_id, p.name, p.category, p.description, p.max_winners, p.number_of_seats, p.status,
     (SELECT COUNT(*) FROM election_candidates ec JOIN candidates c ON c.candidate_id=ec.candidate_id JOIN users u ON u.user_id=c.user_id WHERE ec.position_id=p.position_id AND u.status='active') AS candidate_count
     FROM positions p WHERE p.election_id=? AND p.status='active' ORDER BY p.created_at, p.position_id");
 $posSt->execute([$eid]); $positions = $posSt->fetchAll();
@@ -51,27 +51,28 @@ page_header('Election Details', ['subtitle' => $el['title']]);
   </div>
 
   <div class="panel">
-    <div class="panel-header"><div><h2>Available Positions</h2><p>Positions open in this election. View candidates and compare before voting.</p></div></div>
-    <div class="cards">
-      <?php foreach($positions as $pos): ?>
-        <article class="card">
-          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:10px">
-            <div>
-              <h3 style="margin:0 0 4px;font-size:18px"><?=e($pos['name'])?></h3>
-              <div class="muted" style="font-size:13px"><?=e($el['title'])?></div>
-            </div>
-            <span class="badge green">Active</span>
-          </div>
-          <p class="muted" style="margin-bottom:14px"><?=e(mb_strimwidth((string)($pos['description'] ?: 'No description provided.'),0,120,'…'))?></p>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
-            <span class="badge gray"><?= (int)$pos['candidate_count'] ?> approved candidate<?= ((int)$pos['candidate_count']===1?'':'s') ?></span>
-            <span class="badge gray">Max winners: <?= (int)($pos['max_winners'] ?: 1) ?></span>
-          </div>
-          <a class="btn secondary small" href="position.php?position_id=<?=$pos['position_id']?>&election_id=<?=$eid?>">View Candidates</a>
-        </article>
+    <div class="panel-header"><div><h2>Election Candidates</h2><p>Positions grouped by category. Select a position to view candidates contesting.</p></div></div>
+    <?php if($positions): $byCat=[]; foreach($positions as $pos){ $byCat[$pos['category'] ?: 'General'][]=$pos; } ?>
+      <?php foreach($byCat as $cat=>$plist): ?>
+        <h3 style="margin:18px 0 10px;font-size:15px;color:#4a6b2a;text-transform:uppercase;letter-spacing:.03em"><?=e($cat)?></h3>
+        <div class="cards" style="margin-bottom:8px">
+          <?php foreach($plist as $pos): ?>
+            <article class="card">
+              <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:10px">
+                <div><h3 style="margin:0 0 4px;font-size:18px"><?=e($pos['name'])?></h3><div class="muted" style="font-size:13px"><?=e($el['title'])?></div></div>
+                <span class="badge green">Active</span>
+              </div>
+              <p class="muted" style="margin-bottom:14px"><?=e(mb_strimwidth((string)($pos['description'] ?: 'No description provided.'),0,120,'…'))?></p>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+                <span class="badge gray"><?= (int)$pos['candidate_count'] ?> candidate<?= ((int)$pos['candidate_count']===1?'':'s') ?></span>
+                <span class="badge gray">Seats: <?= (int)($pos['number_of_seats'] ?? $pos['max_winners'] ?: 1) ?></span>
+              </div>
+              <a class="btn secondary small" href="position.php?position_id=<?=$pos['position_id']?>&election_id=<?=$eid?>">View Candidates</a>
+            </article>
+          <?php endforeach; ?>
+        </div>
       <?php endforeach; ?>
-    </div>
-    <?php if(!$positions): ?><div class="empty-state" style="padding:20px 0"><div class="empty-icon">▣</div><p>No active positions configured for this election yet.</p></div><?php endif; ?>
+    <?php else: ?><div class="empty-state" style="padding:20px 0"><div class="empty-icon">▣</div><p>No active positions configured for this election yet.</p></div><?php endif; ?>
   </div>
 </div>
 <?php page_footer(); ?>
