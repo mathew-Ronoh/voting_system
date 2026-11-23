@@ -32,6 +32,7 @@ if (!colExists($pdo, 'positions', 'category')) $stmts[] = "ALTER TABLE positions
 if (!colExists($pdo, 'positions', 'eligibility_requirements')) $stmts[] = "ALTER TABLE positions ADD COLUMN eligibility_requirements TEXT NULL AFTER responsibilities";
 if (!colExists($pdo, 'positions', 'number_of_seats')) $stmts[] = "ALTER TABLE positions ADD COLUMN number_of_seats TINYINT UNSIGNED NOT NULL DEFAULT 1 AFTER eligibility_requirements";
 
+if (!colExists($pdo, 'elections', 'category')) $stmts[] = "ALTER TABLE elections ADD COLUMN category VARCHAR(100) NULL AFTER description";
 if (!colExists($pdo, 'elections', 'allow_multi_position')) $stmts[] = "ALTER TABLE elections ADD COLUMN allow_multi_position TINYINT(1) NOT NULL DEFAULT 0 AFTER results_published";
 
 foreach ($stmts as $sql) {
@@ -75,6 +76,50 @@ if (tableExists($pdo, 'votes') && idxExists($pdo, 'votes', 'uq_ballot_position')
     }
     $pdo->exec("ALTER TABLE votes DROP INDEX uq_ballot_position");
     $pdo->exec("ALTER TABLE votes ADD UNIQUE KEY uq_ballot_position_candidate (ballot_id, position_id, candidate_id)");
+}
+
+// Core table compatibility patches
+$extra = [];
+if (tableExists($pdo,'users')) {
+    if (!colExists($pdo,'users','phone')) $extra[]="ALTER TABLE users ADD COLUMN phone VARCHAR(40) NULL AFTER email";
+    if (!colExists($pdo,'users','username')) $extra[]="ALTER TABLE users ADD COLUMN username VARCHAR(80) NULL AFTER full_name";
+}
+if (tableExists($pdo,'candidates')) {
+    if (!colExists($pdo,'candidates','candidate_number')) $extra[]="ALTER TABLE candidates ADD COLUMN candidate_number VARCHAR(60) NULL AFTER user_id";
+    if (!colExists($pdo,'candidates','biography')) $extra[]="ALTER TABLE candidates ADD COLUMN biography TEXT NULL AFTER manifesto";
+    if (!colExists($pdo,'candidates','department')) $extra[]="ALTER TABLE candidates ADD COLUMN department VARCHAR(150) NULL AFTER biography";
+    if (!colExists($pdo,'candidates','faculty')) $extra[]="ALTER TABLE candidates ADD COLUMN faculty VARCHAR(150) NULL AFTER department";
+    if (!colExists($pdo,'candidates','position_statement')) $extra[]="ALTER TABLE candidates ADD COLUMN position_statement TEXT NULL AFTER faculty";
+    if (!colExists($pdo,'candidates','updated_at')) $extra[]="ALTER TABLE candidates ADD COLUMN updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP AFTER created_at";
+}
+if (tableExists($pdo,'voter_participation') && !colExists($pdo,'voter_participation','confirmation_reference')) {
+    $extra[]="ALTER TABLE voter_participation ADD COLUMN confirmation_reference VARCHAR(80) NULL AFTER submitted_at";
+}
+foreach ($extra as $sql) { echo $sql."\n"; $pdo->exec($sql); }
+
+if (!tableExists($pdo,'notifications')) {
+    echo "CREATE TABLE notifications\n";
+    $pdo->exec("CREATE TABLE notifications (
+      notification_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      user_id BIGINT UNSIGNED NOT NULL,
+      title VARCHAR(190) NOT NULL,
+      message TEXT NOT NULL,
+      is_read TINYINT(1) NOT NULL DEFAULT 0,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      KEY idx_notif_user (user_id, is_read, created_at),
+      CONSTRAINT fk_notif_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+}
+if (!tableExists($pdo,'election_eligibility')) {
+    echo "CREATE TABLE election_eligibility\n";
+    $pdo->exec("CREATE TABLE election_eligibility (
+      election_id BIGINT UNSIGNED NOT NULL,
+      voter_id BIGINT UNSIGNED NOT NULL,
+      PRIMARY KEY (election_id, voter_id),
+      KEY idx_elig_voter (voter_id),
+      CONSTRAINT fk_elig_election FOREIGN KEY (election_id) REFERENCES elections(election_id) ON DELETE CASCADE,
+      CONSTRAINT fk_elig_voter FOREIGN KEY (voter_id) REFERENCES voters(voter_id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 }
 
 echo "Migration complete\n";
