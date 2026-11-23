@@ -122,25 +122,11 @@ page_header('Election Positions', ['subtitle' => 'Create and manage election pos
   </div>
 
   <div class="panel">
-    <div class="panel-header"><div><h2><?= $edit ? 'Edit position' : 'Add new position' ?></h2><p>Manage position details, category, eligibility, and seats.</p></div>
+    <div class="panel-header"><div><h2><?= $edit ? 'Edit Position' : 'Create New Position' ?></h2><p>Enter position details manually. All fields are saved to the database.</p></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <?php if($edit): ?><a class="btn secondary small" href="positions.php">Cancel edit</a><?php endif; ?>
       </div>
     </div>
-    <form method="post" style="margin-bottom:18px;padding:14px;border:1px dashed var(--border);border-radius:12px;background:var(--surface-2)">
-      <input type="hidden" name="csrf_token" value="<?=e(csrf_token())?>">
-      <input type="hidden" name="action" value="load_predefined">
-      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end">
-        <label style="margin:0;flex:1;min-width:240px">Load predefined positions for election
-          <select name="election_id" required>
-            <option value="">Choose election</option>
-            <?php foreach($elections as $el): ?><option value="<?=$el['election_id']?>" <?=$filterElection===(int)$el['election_id']?'selected':''?>><?=e($el['title'])?></option><?php endforeach; ?>
-          </select>
-        </label>
-        <button class="btn secondary" type="submit">Load 13 Predefined Positions</button>
-      </div>
-      <div class="muted" style="font-size:12px;margin-top:8px">Adds the standard 13 positions (Executive, Finance, Academic, Welfare, Representation) if missing.</div>
-    </form>
     <form method="post">
       <input type="hidden" name="csrf_token" value="<?=e(csrf_token())?>">
       <input type="hidden" name="action" value="<?= $edit ? 'update' : 'create' ?>">
@@ -171,8 +157,26 @@ page_header('Election Positions', ['subtitle' => 'Create and manage election pos
         </label>
         <label>Responsibilities (optional)<input name="responsibilities" value="<?=e($edit['responsibilities']??'')?>" placeholder="Key responsibilities"></label>
       </div>
-      <div class="actions"><button class="btn" type="submit">Save Position</button><?php if($edit): ?><a class="btn secondary" href="positions.php">Cancel</a><?php endif; ?></div>
+      <div class="actions"><button class="btn" type="submit"><?= $edit ? 'Save Position' : 'Create Position' ?></button><?php if($edit): ?><a class="btn secondary" href="positions.php">Cancel</a><?php endif; ?></div>
     </form>
+
+    <details style="margin-top:18px;padding:14px;border:1px dashed var(--border);border-radius:12px;background:var(--surface-2)">
+      <summary style="cursor:pointer;font-weight:600;color:#2f5a1d">Optional: Load 13 predefined standard positions</summary>
+      <div class="muted" style="font-size:12px;margin:8px 0 12px">Quickly adds the standard 13 positions (Executive, Finance, Academic, Welfare, Representation) for a selected election. Existing positions are skipped.</div>
+      <form method="post">
+        <input type="hidden" name="csrf_token" value="<?=e(csrf_token())?>">
+        <input type="hidden" name="action" value="load_predefined">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end">
+          <label style="margin:0;flex:1;min-width:240px">Election
+            <select name="election_id" required>
+              <option value="">Choose election</option>
+              <?php foreach($elections as $el): ?><option value="<?=$el['election_id']?>" <?=$filterElection===(int)$el['election_id']?'selected':''?>><?=e($el['title'])?></option><?php endforeach; ?>
+            </select>
+          </label>
+          <button class="btn secondary" type="submit">Load 13 Predefined Positions</button>
+        </div>
+      </form>
+    </details>
   </div>
 
   <div class="panel">
