@@ -40,7 +40,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $newId=(int)$pdo->lastInsertId();
             log_action($pdo,'election_created',$title);
             foreach($pdo->query("SELECT user_id FROM users WHERE role IN ('voter','candidate') AND status='active'")->fetchAll(PDO::FETCH_COLUMN) as $uid){ notify_user($pdo,(int)$uid,'New election created','Election "'.$title.'" has been created.'); }
-            flash('Election created as draft.');
+            flash('Election created as draft. Next: open "Manage Positions" to add election positions.');
         } else flash('Provide a title and valid start/end dates.','error');
     } elseif($action==='update' && $id){
         $allowMulti = isset($_POST['allow_multi_position']) ? 1 : 0;
@@ -95,12 +95,12 @@ if ($editId) {
     $eligVoters=$pdo->query("SELECT v.voter_id,u.full_name,u.email,v.voter_reference FROM voters v JOIN users u ON u.user_id=v.user_id WHERE v.approval_status='approved' ORDER BY u.full_name")->fetchAll();
     $ce=$pdo->prepare("SELECT voter_id FROM election_eligibility WHERE election_id=?"); $ce->execute([$editId]); $currentElig=array_map('intval',$ce->fetchAll(PDO::FETCH_COLUMN));
 }
-$rows=$pdo->query("SELECT * FROM elections ORDER BY created_at DESC")->fetchAll();
+$rows=$pdo->query("SELECT e.*, (SELECT COUNT(*) FROM positions p WHERE p.election_id=e.election_id) AS position_count, (SELECT COUNT(*) FROM positions p WHERE p.election_id=e.election_id AND p.status='active') AS active_position_count FROM elections e ORDER BY e.created_at DESC")->fetchAll();
 page_header('Election Management', ['subtitle' => 'Create, edit, and manage election lifecycle']);
 ?>
 <div class="page-stack">
   <div class="panel">
-    <div class="panel-header"><div><h2><?= $edit ? 'Edit election' : 'Create election' ?></h2><p><?= $edit ? 'Update election details and schedule.' : 'Set up a new election. New elections start as drafts.' ?></p></div><?php if($edit): ?><a class="btn secondary small" href="elections.php">New election</a><?php endif; ?></div>
+    <div class="panel-header"><div><h2><?= $edit ? 'Edit election' : 'Create election' ?></h2><p><?= $edit ? 'Update election details and schedule.' : 'Set up a new election. New elections start as drafts.' ?></p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><?php if($edit): ?><a class="btn small" href="positions.php?election_id=<?=$edit['election_id']?>">Manage Positions</a><a class="btn secondary small" href="elections.php">New election</a><?php endif; ?></div></div>
     <form method="post">
       <input type="hidden" name="csrf_token" value="<?=e(csrf_token())?>">
       <input type="hidden" name="action" value="<?= $edit ? 'update' : 'create' ?>">
@@ -153,19 +153,20 @@ page_header('Election Management', ['subtitle' => 'Create, edit, and manage elec
     <div class="panel-header"><div><h2>Existing elections</h2><p>Manage lifecycle: activate, close, publish, cancel.</p></div></div>
     <div class="table-wrap" style="box-shadow:none;border:0">
       <table>
-        <thead><tr><th>Title</th><th>Category</th><th>Schedule</th><th>Status</th><th>Results</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Title</th><th>Category</th><th>Schedule</th><th>Positions</th><th>Status</th><th>Results</th><th>Actions</th></tr></thead>
         <tbody>
         <?php foreach($rows as $r): ?>
           <tr>
             <td><strong><?=e($r['title'])?></strong><div class="muted" style="font-size:12px"><?=e($r['description'] ?? '')?></div></td>
             <td><?=e($r['category'] ?: '—')?></td>
             <td><small><?=e(date('M j, Y g:i A', strtotime($r['start_at'])))?><br><?=e(date('M j, Y g:i A', strtotime($r['end_at'])))?></small></td>
+            <td><span class="badge gray"><?= (int)$r['active_position_count'] ?>/<?= (int)$r['position_count'] ?> active</span></td>
             <td><span class="badge <?= match($r['status']){'open'=>'green','scheduled'=>'orange','closed'=>'red','draft'=>'gray','published'=>'blue','cancelled'=>'red',default=>'gray'} ?>"><?=e(ucfirst($r['status']))?></span></td>
             <td><span class="badge <?= $r['results_published']?'green':'orange' ?>"><?= $r['results_published']?'Published':'Hidden' ?></span></td>
             <td>
               <div class="table-actions">
                 <a class="btn secondary small" href="?edit=<?=$r['election_id']?>">Edit</a>
-                <a class="btn secondary small" href="positions.php?election_id=<?=$r['election_id']?>">Positions</a>
+                <a class="btn small" href="positions.php?election_id=<?=$r['election_id']?>">Manage Positions</a>
                 <?php if($r['status']==='draft'): ?>
                   <form class="inline" method="post"><input type="hidden" name="csrf_token" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="activate"><input type="hidden" name="election_id" value="<?=$r['election_id']?>"><button class="btn small">Activate</button></form>
                 <?php endif; ?>
@@ -182,7 +183,7 @@ page_header('Election Management', ['subtitle' => 'Create, edit, and manage elec
             </td>
           </tr>
         <?php endforeach; ?>
-        <?php if(!$rows): ?><tr><td colspan="6" class="muted">No elections created yet.</td></tr><?php endif; ?>
+        <?php if(!$rows): ?><tr><td colspan="7" class="muted">No elections created yet.</td></tr><?php endif; ?>
         </tbody>
       </table>
     </div>
