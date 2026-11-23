@@ -104,38 +104,83 @@ $rows=$pdo->query("SELECT c.candidate_id,u.full_name,u.email,u.status AS account
       <div class="grid-2">
         <label>Initial password<input type="password" name="password" minlength="10" required></label>
         <label>Election position
-          <select name="position_id" required>
+          <input type="text" id="regPositionSearch" placeholder="Filter positions..." autocomplete="off" style="margin-bottom:6px">
+          <select name="position_id" id="regPositionSelect" required>
             <option value="">Choose position</option>
-            <?php foreach($positions as $p): ?><option value="<?=$p['position_id']?>"><?=e($p['title'].' — '.$p['name'])?></option><?php endforeach; ?>
+            <?php foreach($positions as $p): ?><option value="<?=$p['position_id']?>" data-search="<?=e(strtolower($p['title'].' '.$p['name']))?>"><?=e($p['title'].' — '.$p['name'])?></option><?php endforeach; ?>
           </select>
         </label>
       </div>
       <label>Manifesto<textarea name="manifesto" placeholder="Candidate manifesto or profile summary"></textarea></label>
       <div><button class="btn">Register candidate</button></div>
     </form>
+    <script>
+    (function(){
+      var s=document.getElementById('regPositionSearch'), sel=document.getElementById('regPositionSelect');
+      if(!s||!sel) return;
+      s.addEventListener('input', function(){
+        var q=(s.value||'').toLowerCase().trim();
+        for(var i=0;i<sel.options.length;i++){ var o=sel.options[i]; if(!o.value){o.hidden=false;o.style.display='';continue;} var show=!q || (o.getAttribute('data-search')||o.textContent.toLowerCase()).indexOf(q)!==-1; o.hidden=!show; o.style.display=show?'':'none'; }
+      });
+    })();
+    </script>
   </div>
 
   <div class="panel">
-    <div class="panel-header"><div><h2>Assign existing candidate</h2><p>Choose an approved candidate and assign them to an election position.</p></div></div>
-    <form method="post">
+    <div class="panel-header"><div><h2>Assign existing candidate</h2><p>Search and assign an approved candidate to an election position. Useful when managing many candidates.</p></div></div>
+    <form method="post" id="assignExistingForm">
       <input type="hidden" name="csrf_token" value="<?=e(csrf_token())?>">
       <input type="hidden" name="action" value="assign_existing">
       <div class="grid-2">
-        <label>Candidate
-          <select name="candidate_id" required>
+        <label>Search candidate
+          <input type="text" id="candidateSearch" placeholder="Type name or email to filter..." autocomplete="off">
+        </label>
+        <label>Search position
+          <input type="text" id="positionSearch" placeholder="Type election or position to filter..." autocomplete="off">
+        </label>
+      </div>
+      <div class="grid-2">
+        <label>Candidate <span class="muted" id="candidateCount" style="font-weight:normal;font-size:12px"></span>
+          <select name="candidate_id" id="candidateSelect" required size="8" style="min-height:180px">
             <option value="">Choose candidate</option>
-            <?php foreach($allCandidates as $c): ?><option value="<?=$c['candidate_id']?>"><?=e($c['full_name'].' ('.$c['email'].')')?></option><?php endforeach; ?>
+            <?php foreach($allCandidates as $c): ?><option value="<?=$c['candidate_id']?>" data-search="<?=e(strtolower($c['full_name'].' '.$c['email']))?>"><?=e($c['full_name'].' ('.$c['email'].')')?></option><?php endforeach; ?>
           </select>
         </label>
-        <label>Election position
-          <select name="position_id" required>
+        <label>Election position <span class="muted" id="positionCount" style="font-weight:normal;font-size:12px"></span>
+          <select name="position_id" id="positionSelect" required size="8" style="min-height:180px">
             <option value="">Choose position</option>
-            <?php foreach($positions as $p): ?><option value="<?=$p['position_id']?>"><?=e($p['title'].' — '.$p['name'])?></option><?php endforeach; ?>
+            <?php foreach($positions as $p): ?><option value="<?=$p['position_id']?>" data-search="<?=e(strtolower($p['title'].' '.$p['name']))?>"><?=e($p['title'].' — '.$p['name'])?></option><?php endforeach; ?>
           </select>
         </label>
       </div>
       <div><button class="btn">Assign candidate</button></div>
     </form>
+    <script>
+    (function(){
+      function wire(searchId, selectId, countId) {
+        var search = document.getElementById(searchId), sel = document.getElementById(selectId), count = document.getElementById(countId);
+        if(!search || !sel) return;
+        function filter(){
+          var q = (search.value || '').toLowerCase().trim();
+          var visible = 0;
+          for (var i=0; i<sel.options.length; i++) {
+            var opt = sel.options[i];
+            if (!opt.value) { opt.hidden = false; continue; }
+            var hay = (opt.getAttribute('data-search') || opt.textContent || '').toLowerCase();
+            var show = !q || hay.indexOf(q) !== -1;
+            opt.hidden = !show;
+            opt.style.display = show ? '' : 'none';
+            if (show) visible++;
+          }
+          if (count) count.textContent = visible + ' shown';
+        }
+        search.addEventListener('input', filter);
+        filter();
+      }
+      wire('candidateSearch','candidateSelect','candidateCount');
+      wire('positionSearch','positionSelect','positionCount');
+    })();
+    </script>
   </div>
 
   <div class="panel">
