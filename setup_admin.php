@@ -8,7 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = trim($_POST['full_name'] ?? '');
     $email = strtolower(trim($_POST['email'] ?? ''));
     $password = $_POST['password'] ?? '';
-    if ($name && filter_var($email, FILTER_VALIDATE_EMAIL) && strlen($password) >= 12) {
+    if ($name && filter_var($email, FILTER_VALIDATE_EMAIL) && strlen($password) >= 4) {
         $s = $pdo->prepare("INSERT INTO users(full_name,email,password_hash,role,status) VALUES(?,?,?,'admin','active')");
         $s->execute([$name, $email, password_hash($password, PASSWORD_DEFAULT)]);
         $message = 'Administrator created. Delete setup_admin.php immediately, then sign in.';
@@ -30,7 +30,7 @@ page_header('Create first administrator', ['layout' => 'public']);
     <input type="hidden" name="csrf_token" value="<?=e(csrf_token())?>">
     <label>Full name<input name="full_name" required></label>
     <label>Email<input type="email" name="email" required></label>
-    <label>Password (minimum 12 characters)<input type="password" name="password" minlength="12" required></label>
+    <label>Password (minimum 4 characters)<input type="password" name="password" minlength="4" required></label>
     <button class="btn block" type="submit">Create administrator</button>
   </form>
 </div>

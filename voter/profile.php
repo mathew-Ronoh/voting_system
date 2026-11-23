@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     if ($name === '') { flash('Full name is required.', 'error'); redirect('/voting_system/voter/profile.php'); }
     try {
         if ($password !== '') {
-            if (strlen($password) < 10) { flash('Password must be at least 10 characters.', 'error'); redirect('/voting_system/voter/profile.php'); }
+            if (strlen($password) < 4) { flash('Password must be at least 4 characters.', 'error'); redirect('/voting_system/voter/profile.php'); }
             $s=$pdo->prepare("UPDATE users SET full_name=?,phone=?,username=?,password_hash=? WHERE user_id=?");
             $s->execute([$name,$phone?:null,$username?:null,password_hash($password,PASSWORD_DEFAULT),$uid]);
         } else {
@@ -41,7 +41,7 @@ page_header('My Profile', ['subtitle' => 'Manage your account information']);
         <label>Phone<input name="phone" value="<?=e($u['phone']??'')?>"></label>
       </div>
       <label>Voter reference / ID (read-only)<input value="<?=e($u['voter_reference']??'')?>" disabled></label>
-      <label>New password (optional)<input type="password" name="password" minlength="10" placeholder="Leave blank to keep current password"></label>
+      <label>New password (optional)<input type="password" name="password" minlength="4" placeholder="Leave blank to keep current password"></label>
       <div><button class="btn">Save changes</button></div>
     </form>
   </div>

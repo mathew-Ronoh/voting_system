@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $pdo->beginTransaction();
         if ($password !== '') {
-            if (strlen($password) < 10) { throw new RuntimeException('Password must be at least 10 characters.'); }
+            if (strlen($password) < 4) { throw new RuntimeException('Password must be at least 4 characters.'); }
             $pdo->prepare("UPDATE users SET full_name=?,phone=?,password_hash=? WHERE user_id=?")->execute([$name,$phone?:null,password_hash($password,PASSWORD_DEFAULT),$uid]);
         } else {
             $pdo->prepare("UPDATE users SET full_name=?,phone=? WHERE user_id=?")->execute([$name,$phone?:null,$uid]);
@@ -94,7 +94,7 @@ page_header('My Profile', ['subtitle'=>'Manage your candidate profile and public
         <label>Public contact (optional, approved for public display)<input name="public_contact" value="<?=e($u['public_contact']??'')?>"></label>
       </div>
       <label>Campaign information<textarea name="campaign_info"><?=e($u['campaign_info']??'')?></textarea></label>
-      <label>New password (optional)<input type="password" name="password" minlength="10" placeholder="Leave blank to keep current password"></label>
+      <label>New password (optional)<input type="password" name="password" minlength="4" placeholder="Leave blank to keep current password"></label>
       <div><button class="btn">Save profile</button></div>
     </form>
   </div>

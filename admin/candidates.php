@@ -19,7 +19,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 if($pdo->inTransaction())$pdo->rollBack();
                 flash('Could not register candidate. Check that email is unique and position exists.','error');
             }
-        } else flash('Complete all fields. Password must be at least 10 characters.','error');
+        } else flash('Complete all fields. Password must be at least 4 characters.','error');
     } elseif($action==='suspend' || $action==='activate_account'){
         $cid=(int)($_POST['candidate_id']??0);
         $status = $action==='suspend' ? 'suspended' : 'active';
@@ -102,7 +102,7 @@ $rows=$pdo->query("SELECT c.candidate_id,u.full_name,u.email,u.status AS account
         <label>Email<input type="email" name="email" required></label>
       </div>
       <div class="grid-2">
-        <label>Initial password<input type="password" name="password" minlength="10" required></label>
+        <label>Initial password<input type="password" name="password" minlength="4" required></label>
         <label>Election position
           <input type="text" id="regPositionSearch" placeholder="Filter positions..." autocomplete="off" style="margin-bottom:6px">
           <select name="position_id" id="regPositionSelect" required>

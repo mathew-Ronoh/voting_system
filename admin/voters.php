@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
                 if($pdo->inTransaction()) $pdo->rollBack();
                 flash('Could not create voter. Check whether the email or voter reference is already used.','error');
             }
-        } else flash('Complete all fields. Password must be at least 10 characters.','error');
+        } else flash('Complete all fields. Password must be at least 4 characters.','error');
         redirect('/voting_system/admin/voters.php');
     }
     if ($action==='approve') {
@@ -59,7 +59,7 @@ if ($statusFilter && in_array($statusFilter,['pending','approved','rejected'],tr
       </div>
       <div class="form-row">
         <label>Voter reference / ID<input name="voter_reference" required></label>
-        <label>Temporary password<input type="password" name="password" minlength="10" required></label>
+        <label>Temporary password<input type="password" name="password" minlength="4" required></label>
       </div>
       <div><button class="btn">Create voter account</button></div>
     </form>

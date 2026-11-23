@@ -8,8 +8,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $reg = trim($_POST['voter_reference'] ?? '');
     $password = $_POST['password'] ?? '';
     $confirm = $_POST['confirm_password'] ?? '';
-    if ($name === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || $reg === '' || strlen($password) < 10) {
-        flash('Enter all required details. Password must be at least 10 characters.', 'error');
+    if ($name === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || $reg === '' || strlen($password) < 4) {
+        flash('Enter all required details. Password must be at least 4 characters.', 'error');
     } elseif ($password !== $confirm) {
         flash('Passwords do not match.', 'error');
     } else {
@@ -55,10 +55,10 @@ page_header('Voter registration', ['layout' => 'public']);
     </label>
     <div class="form-row">
       <label>Password
-        <input type="password" name="password" required minlength="10" autocomplete="new-password" placeholder="At least 10 characters">
+        <input type="password" name="password" required minlength="4" autocomplete="new-password" placeholder="At least 4 characters">
       </label>
       <label>Confirm password
-        <input type="password" name="confirm_password" required minlength="10" autocomplete="new-password" placeholder="Re-enter password">
+        <input type="password" name="confirm_password" required minlength="4" autocomplete="new-password" placeholder="Re-enter password">
       </label>
     </div>
     <p class="form-help">Self-registered voters have pending approval status until an administrator approves the account.</p>
