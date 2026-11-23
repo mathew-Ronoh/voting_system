@@ -83,6 +83,29 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         log_action($pdo,'election_cancelled','Election #'.$id);
         foreach($pdo->query("SELECT user_id FROM users WHERE role IN ('voter','candidate') AND status='active'")->fetchAll(PDO::FETCH_COLUMN) as $uid){ notify_user($pdo,(int)$uid,'Election cancelled','"'.$et.'" has been cancelled.'); }
         flash('Election cancelled (draft/scheduled only).');
+    } elseif($action==='load_predefined' && $id){
+        $chk=$pdo->prepare("SELECT election_id FROM elections WHERE election_id=?"); $chk->execute([$id]);
+        if(!$chk->fetch()){ flash('Election not found.','error'); redirect('/voting_system/admin/elections.php'); }
+        $predefined = [
+            ['President','Executive Leadership','Leads the student body/organization and represents members in official matters.','Must be a registered member in good standing; meets election eligibility criteria.',1],
+            ['Vice President','Executive Leadership','Supports the President and assumes duties when required.','Must be a registered member in good standing; meets election eligibility criteria.',1],
+            ['Secretary General','Executive Leadership','Maintains records, correspondence, and official communications.','Must be a registered member in good standing; good communication and organizational skills.',1],
+            ['Deputy Secretary General','Executive Leadership','Assists the Secretary General and acts in their absence.','Must be a registered member in good standing; good organizational skills.',1],
+            ['Treasurer','Finance','Manages financial records, budgets, and accountability.','Must be a registered member in good standing; basic financial accountability knowledge preferred.',1],
+            ['Academic Secretary','Academic Affairs','Handles academic-related issues and liaises on academic matters.','Must be a registered member in good standing; enrolled/active in academic program where applicable.',1],
+            ['Organizing Secretary','Student Welfare','Coordinates events, activities, and logistics.','Must be a registered member in good standing; strong coordination skills.',1],
+            ['Social Welfare Secretary','Student Welfare','Promotes member welfare, support services, and wellbeing initiatives.','Must be a registered member in good standing; committed to welfare advocacy.',1],
+            ["Men's Representative",'Student Representation',"Represents men's interests and concerns.","Must be a registered male member in good standing where applicable.",1],
+            ["Women's Representative",'Student Representation',"Represents women's interests and concerns.","Must be a registered female member in good standing where applicable.",1],
+            ['Sports Representative','Student Representation','Represents sports and extracurricular activity interests.','Must be a registered member in good standing; interest in sports/activities.',1],
+            ['Disability Representative','Student Representation','Advocates for accessibility and inclusion of members with disabilities.','Must be a registered member in good standing; committed to inclusion and accessibility.',1],
+            ['Year Representative','Student Representation','Represents the interests of a specific year/group cohort.','Must belong to the represented year/group and be in good standing.',1],
+        ];
+        $ins = $pdo->prepare("INSERT INTO positions(election_id,name,category,description,eligibility_requirements,number_of_seats,max_winners,max_selections,status) SELECT ?,?,?,?,?,?,?,?,'active' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM positions WHERE election_id=? AND name=?)");
+        $added=0;
+        foreach($predefined as $p){ $ins->execute([$id,$p[0],$p[1],$p[2],$p[3],$p[4],$p[4],$p[4],$id,$p[0]]); $added += $ins->rowCount(); }
+        log_action($pdo,'positions_predefined_loaded',"Loaded $added predefined positions for election #$id");
+        flash($added ? "$added predefined position(s) added to the election." : 'All 13 predefined positions already exist for this election.');
     }
     redirect('/voting_system/admin/elections.php'.($id && $action==='update' ? '' : ''));
 }
@@ -167,6 +190,7 @@ page_header('Election Management', ['subtitle' => 'Create, edit, and manage elec
               <div class="table-actions">
                 <a class="btn secondary small" href="?edit=<?=$r['election_id']?>">Edit</a>
                 <a class="btn small" href="positions.php?election_id=<?=$r['election_id']?>">Manage Positions</a>
+                <form class="inline" method="post" onsubmit="return confirm('Load all 13 predefined positions into this election? Existing ones will be skipped.')"><input type="hidden" name="csrf_token" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="load_predefined"><input type="hidden" name="election_id" value="<?=$r['election_id']?>"><button class="btn secondary small">Load 13 Positions</button></form>
                 <?php if($r['status']==='draft'): ?>
                   <form class="inline" method="post"><input type="hidden" name="csrf_token" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="activate"><input type="hidden" name="election_id" value="<?=$r['election_id']?>"><button class="btn small">Activate</button></form>
                 <?php endif; ?>
